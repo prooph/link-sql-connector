@@ -33,8 +33,8 @@ final class ConnectionManagerFactory implements FactoryInterface
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
         return new ConnectionManager(
-            $serviceLocator->get('application.config_location'),
-            $serviceLocator->get('system_config.config_writer'),
+            $serviceLocator->get('prooph.link.app.config_location'),
+            $serviceLocator->get('prooph.link.system_config.config_writer'),
             $serviceLocator->get('prooph.link.sqlconnector.dbal_connections')
         );
     }

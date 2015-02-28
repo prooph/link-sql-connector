@@ -55,8 +55,8 @@
     function (context) {
 
         var self = this,
-            connectionApiUrl = "<?php echo $this->url('sql_connector/api/connection') ?>",
-            connectorApiUrl  = "<?php echo $this->url('sql_connector/api/connector')  ?>",
+            connectionApiUrl = "<?php echo $this->url('prooph.link/sql_connector/api/connection') ?>",
+            connectorApiUrl  = "<?php echo $this->url('prooph.link/sql_connector/api/connector')  ?>",
             set_values = function (values) {
                 Prooph.Link.Helpers.merge_tag_elements_with_obj(self, values);
             },

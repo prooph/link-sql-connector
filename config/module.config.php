@@ -17,80 +17,78 @@ return array(
     ],
     'router' => [
         'routes' => [
-            'routes' => [
-                'prooph.link' => [
-                    'child_routes' => [
-                        'sql_connector' => [
-                            'type' => 'Literal',
-                            'options' => [
-                                'route' => '/sql-connector',
-                            ],
-                            'may_terminate' => false,
-                            'child_routes' => [
-                                'configurator' => [
-                                    'type' => 'Literal',
-                                    'options' => [
-                                        'route' => '/sql-manager',
-                                        'defaults' => [
-                                            'controller' => 'Prooph\Link\SqlConnector\Controller\SqlManager',
-                                            'action' => 'start-app'
-                                        ]
+            'prooph.link' => [
+                'child_routes' => [
+                    'sql_connector' => [
+                        'type' => 'Literal',
+                        'options' => [
+                            'route' => '/sql-connector',
+                        ],
+                        'may_terminate' => false,
+                        'child_routes' => [
+                            'configurator' => [
+                                'type' => 'Literal',
+                                'options' => [
+                                    'route' => '/sql-manager',
+                                    'defaults' => [
+                                        'controller' => 'Prooph\Link\SqlConnector\Controller\SqlManager',
+                                        'action' => 'start-app'
                                     ]
+                                ]
+                            ],
+                            'api' => [
+                                'type' => 'Literal',
+                                'options' => [
+                                    'route' => '/api',
                                 ],
-                                'api' => [
-                                    'type' => 'Literal',
-                                    'options' => [
-                                        'route' => '/api',
+                                'may_terminate' => true,
+                                'child_routes' => [
+                                    'connector' => [
+                                        'type' => 'Segment',
+                                        'options' => [
+                                            'route' => '/connectors[/:id]',
+                                            'constraints' => array(
+                                                'id' => '.+',
+                                            ),
+                                            'defaults' => [
+                                                'controller' => 'Prooph\Link\SqlConnector\Api\Connector',
+                                            ]
+                                        ]
                                     ],
-                                    'may_terminate' => true,
-                                    'child_routes' => [
-                                        'connector' => [
-                                            'type' => 'Segment',
-                                            'options' => [
-                                                'route' => '/connectors[/:id]',
-                                                'constraints' => array(
-                                                    'id' => '.+',
-                                                ),
-                                                'defaults' => [
-                                                    'controller' => 'Prooph\Link\SqlConnector\Api\Connector',
-                                                ]
+                                    'test-connection' => [
+                                        'type' => 'Segment',
+                                        'options' => [
+                                            'route' => '/test-connections[/:id]',
+                                            'constraints' => array(
+                                                'id' => '.+',
+                                            ),
+                                            'defaults' => [
+                                                'controller' => 'Prooph\Link\SqlConnector\Api\TestConnection',
                                             ]
-                                        ],
-                                        'test-connection' => [
-                                            'type' => 'Segment',
-                                            'options' => [
-                                                'route' => '/test-connections[/:id]',
-                                                'constraints' => array(
-                                                    'id' => '.+',
-                                                ),
-                                                'defaults' => [
-                                                    'controller' => 'Prooph\Link\SqlConnector\Api\TestConnection',
-                                                ]
+                                        ]
+                                    ],
+                                    'connection' => [
+                                        'type' => 'Segment',
+                                        'options' => [
+                                            'route' => '/connections[/:id]',
+                                            'constraints' => array(
+                                                'id' => '.+',
+                                            ),
+                                            'defaults' => [
+                                                'controller' => 'Prooph\Link\SqlConnector\Api\Connection',
                                             ]
-                                        ],
-                                        'connection' => [
-                                            'type' => 'Segment',
-                                            'options' => [
-                                                'route' => '/connections[/:id]',
-                                                'constraints' => array(
-                                                    'id' => '.+',
-                                                ),
-                                                'defaults' => [
-                                                    'controller' => 'Prooph\Link\SqlConnector\Api\Connection',
-                                                ]
-                                            ]
-                                        ],
-                                        'table' => [
-                                            'type' => 'Segment',
-                                            'options' => [
-                                                'route' => '/connections/:dbname/tables[/:name]',
-                                                'constraints' => array(
-                                                    'dbname' => '.+',
-                                                    'name' => '.+',
-                                                ),
-                                                'defaults' => [
-                                                    'controller' => 'Prooph\Link\SqlConnector\Api\Table',
-                                                ],
+                                        ]
+                                    ],
+                                    'table' => [
+                                        'type' => 'Segment',
+                                        'options' => [
+                                            'route' => '/connections/:dbname/tables[/:name]',
+                                            'constraints' => array(
+                                                'dbname' => '.+',
+                                                'name' => '.+',
+                                            ),
+                                            'defaults' => [
+                                                'controller' => 'Prooph\Link\SqlConnector\Api\Table',
                                             ],
                                         ],
                                     ],
@@ -100,7 +98,7 @@ return array(
                     ],
                 ],
             ],
-        ]
+        ],
     ],
     'prooph.link.sqlconnector' => [
         //Placeholder for configured connections. The UI creates a prooph.link.sqlconnector.local.php in config/autoload and puts
@@ -133,29 +131,29 @@ return array(
             'prooph.link.sqlconnector/partials/pm-metadata-config' => __DIR__ . '/../view/sqlconnector/partials/pm-metadata-config.phtml',
             'prooph.link.sqlconnector/sql-manager/app' => __DIR__ . '/../view/sqlconnector/sql-manager/app.phtml',
             'prooph.link.sqlconnector/sql-manager/partial/sidebar-left' => __DIR__ . '/../view/sqlconnector/sql-manager/partial/sidebar-left.phtml',
+            //riot tags
+            'prooph.link.sqlconnector/sql-manager/riot-tag/sql-manager' => __DIR__ . '/../view/sqlconnector/sql-manager/riot-tag/sql-manager.phtml',
+            'prooph.link.sqlconnector/sql-manager/riot-tag/connector-list' => __DIR__ . '/../view/sqlconnector/sql-manager/riot-tag/connector-list.phtml',
+            'prooph.link.sqlconnector/sql-manager/riot-tag/connector-details' => __DIR__ . '/../view/sqlconnector/sql-manager/riot-tag/connector-details.phtml',
+            'prooph.link.sqlconnector/sql-manager/riot-tag/connection-config' => __DIR__ . '/../view/sqlconnector/sql-manager/riot-tag/connection-config.phtml',
+            'prooph.link.sqlconnector/pm/riot-tag/sqlconnector-metadata' => __DIR__ . '/../view/sqlconnector/pm/riot-tag/sqlconnector-metadata.phtml'
         ],
-        'template_path_stack' => array(
-            __DIR__ . '/../view',
-        ),
     ),
     'asset_manager' => array(
         'resolver_configs' => array(
             //Riot tags are resolved by the Application\Service\RiotTagCollectionResolver
             'riot-tags' => [
-                'js/sqlconnector/app.js' => [
+                'js/prooph/link/sqlconnector/app.js' => [
                     'prooph.link.sqlconnector/sql-manager/riot-tag/sql-manager',
                     'prooph.link.sqlconnector/sql-manager/riot-tag/connector-list',
                     'prooph.link.sqlconnector/sql-manager/riot-tag/connector-details',
                     'prooph.link.sqlconnector/sql-manager/riot-tag/connection-config',
                 ],
                 //Inject process manager metadata configurator for sql connectors
-                'js/process-config/app.js' => [
+                'js/prooph/link/process-config/app.js' => [
                     'prooph.link.sqlconnector/pm/riot-tag/sqlconnector-metadata',
                 ],
             ],
-            'paths' => array(
-                __DIR__ . '/../public',
-            ),
         ),
     ),
     'service_manager' => [

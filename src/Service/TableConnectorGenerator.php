@@ -176,7 +176,7 @@ final class TableConnectorGenerator
         $dbNsName = $this->titleize($dbname);
         $rowClassName = $this->titleize($table);
         $collectionClassName = $rowClassName . "Collection";
-        $namespace = 'Application\DataType\SqlConnector\\' . $dbNsName;
+        $namespace = 'Prooph\Link\Application\DataType\SqlConnector\\' . $dbNsName;
 
         $this->dataTypeLocation->addDataTypeClass(
             $namespace . '\\' . $rowClassName,
@@ -208,7 +208,7 @@ final class TableConnectorGenerator
         $dbNsName = $this->titleize($dbname);
         $rowClassName = $this->titleize($table);
         $collectionClassName = $rowClassName . "Collection";
-        $namespace = 'Application\DataType\SqlConnector\\' . $dbNsName;
+        $namespace = 'Prooph\Link\Application\DataType\SqlConnector\\' . $dbNsName;
 
         $this->dataTypeLocation->addDataTypeClass(
             $namespace . '\\' . $rowClassName,
@@ -233,7 +233,7 @@ final class TableConnectorGenerator
         $dbNsName = $this->titleize($dbname);
         $rowClassName = $this->titleize($table);
         $collectionClassName = $rowClassName . "Collection";
-        $namespace = 'Application\DataType\SqlConnector\\' . $dbNsName;
+        $namespace = 'Prooph\Link\Application\DataType\SqlConnector\\' . $dbNsName;
 
         return [
             $namespace . '\\' . $rowClassName,

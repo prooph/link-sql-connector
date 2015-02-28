@@ -11,24 +11,10 @@
 
 namespace Prooph\Link\SqlConnector;
 
-use Prooph\Link\Application\Service\SystemConfigProvider;
-use Zend\Mvc\MvcEvent;
-
 class Module
 {
     public function getConfig()
     {
-        return include __DIR__ . '/config/module.config.php';
-    }
-
-    public function getAutoloaderConfig()
-    {
-        return array(
-            'Zend\Loader\StandardAutoloader' => array(
-                'namespaces' => array(
-                    __NAMESPACE__ => __DIR__ . '/src',
-                ),
-            ),
-        );
+        return include __DIR__ . '/../config/module.config.php';
     }
 }
