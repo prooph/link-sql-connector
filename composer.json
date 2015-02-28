@@ -27,12 +27,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Prooph\\Link\\Sqlconnector\\": "src"
+            "Prooph\\Link\\SqlConnector\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "ProophTest\\Link\\Sqlconnector\\": "tests/"
+            "ProophTest\\Link\\SqlConnector\\": "tests/"
         }
     }
 }
