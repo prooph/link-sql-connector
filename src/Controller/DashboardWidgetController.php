@@ -11,8 +11,8 @@
 
 namespace Prooph\Link\SqlConnector\Controller;
 
-use Dashboard\Controller\AbstractWidgetController;
-use Dashboard\View\DashboardWidget;
+use Prooph\Link\Dashboard\Controller\AbstractWidgetController;
+use Prooph\Link\Dashboard\View\DashboardWidget;
 use Prooph\Link\Application\Projection\ProcessingConfig;
 use Prooph\Link\Application\Service\NeedsSystemConfig;
 
