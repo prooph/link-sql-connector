@@ -61,10 +61,12 @@ final class AbstractDoctrineTableGatewayFactory implements AbstractFactoryInterf
 
         $connector = $config->getConnectors()[$requestedName];
 
+
         if (! isset($connector['dbal_connection'])) throw new \InvalidArgumentException(sprintf('Missing dbal_connection for sql connector %s', $requestedName));
         if (! isset($connector['table'])) throw new \InvalidArgumentException(sprintf('Missing table definition for sql connector %s', $requestedName));
 
         $appConfig = $serviceLocator->get('config');
+
 
         if (! isset($appConfig['prooph.link.sqlconnector']['connections'][$connector['dbal_connection']])) throw new \InvalidArgumentException(sprintf('The DBAL connection %s can not be found. Please check config/autoload/sqlconnector.local.php!', $connector['dbal_connection']));
 

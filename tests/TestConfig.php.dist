@@ -1,0 +1,17 @@
+<?php
+return array(
+    'modules' => array(
+        'Prooph\Link\SqlConnector',
+        'Prooph\Link\Application',
+        'ProophTest\Link\SqlConnector'
+    ),
+    'module_listener_options' => array(
+        'config_glob_paths'    => array(
+        ),
+        'module_paths' => array(
+            'module',
+            'vendor',
+            __DIR__ . '/SqlConnector',
+        ),
+    ),
+);
