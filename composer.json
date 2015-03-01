@@ -33,7 +33,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "ProophTest\\Link\\SqlConnector\\": "tests/"
+            "ProophTest\\Link\\SqlConnector\\": "tests/SqlConnector"
         }
     }
 }
