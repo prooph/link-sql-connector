@@ -32,7 +32,7 @@ final class TableResourceFactory implements FactoryInterface
      */
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
-        return new Table($serviceLocator->getServiceLocator()->get('prooph.link.sqlconnector.dbal_connections'));
+        return new Table($serviceLocator->getServiceLocator()->get('prooph.link.sqlconnector.connection_manager'));
     }
 }
  

@@ -13,6 +13,7 @@ namespace Prooph\Link\SqlConnector\Api;
 
 use Prooph\Link\Application\Service\AbstractRestController;
 use Doctrine\DBAL\DriverManager;
+use Prooph\Link\SqlConnector\Service\ConnectionManager;
 use Prooph\Link\SqlConnector\Service\DbalConnectionCollection;
 use ZF\ContentNegotiation\JsonModel;
 
@@ -25,14 +26,14 @@ use ZF\ContentNegotiation\JsonModel;
 final class Table extends AbstractRestController
 {
     /**
-     * @var DbalConnectionCollection
+     * @var ConnectionManager
      */
     private $dbalConnections;
 
     /**
-     * @param DbalConnectionCollection $connections
+     * @param ConnectionManager $connections
      */
-    public function __construct(DbalConnectionCollection $connections)
+    public function __construct(ConnectionManager $connections)
     {
         $this->dbalConnections = $connections;
     }
@@ -41,11 +42,9 @@ final class Table extends AbstractRestController
     {
         $connectionDb = $this->params('dbname');
 
-        if (! $this->dbalConnections->containsKey($connectionDb)) {
+        if (! $connection = $this->dbalConnections->findByDbName($connectionDb)) {
             return $this->getApiProblemResponse(404, 'Dbal connection can not be found');
         }
-
-        $connection = $this->dbalConnections->get($connectionDb);
 
         $tables = $connection->connection()->getSchemaManager()->listTableNames();
 

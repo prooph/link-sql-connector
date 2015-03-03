@@ -10,6 +10,7 @@
  */
 
 namespace Prooph\Link\SqlConnector\Service;
+use Assert\Assertion;
 use Prooph\Link\Application\SharedKernel\ConfigLocation;
 use Prooph\Link\Application\Model\ConfigWriter;
 
@@ -54,26 +55,82 @@ final class ConnectionManager
 
     /**
      * @param array $connection
+     * @param null|string $alternativeKey
      * @throws \InvalidArgumentException
      */
-    public function addConnection(array $connection)
+    public function addConnection(array $connection, $alternativeKey = null)
     {
-        if ($this->connections->containsKey($connection['dbname'])) throw new \InvalidArgumentException(sprintf('A connection for DB %s already exists', $connection['dbname']));
+        if ($this->findByDbName($connection['dbname'])) throw new \InvalidArgumentException(sprintf('A connection for DB %s already exists', $connection['dbname']));
 
-        $this->connections->add(DbalConnection::fromConfiguration($connection));
+        if (is_null($alternativeKey)) {
+            $alternativeKey = $connection['dbname'];
+        }
+
+        Assertion::string($alternativeKey);
+
+        if ($this->connections->containsKey($alternativeKey)) {
+            throw new \InvalidArgumentException("A connection for key $alternativeKey is already defined");
+        }
+        
+        $this->connections->add(DbalConnection::fromConfiguration($connection), $alternativeKey);
 
         $this->saveConnections(true);
     }
 
     /**
+     * @param string $dbName
+     * @return DbalConnection|null
+     */
+    public function findByDbName($dbName)
+    {
+        foreach ($this->connections as $connection) {
+            if ($connection->config()['dbname'] === $dbName) {
+                return $connection;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param $key
+     * @return DbalConnection
+     */
+    public function get($key)
+    {
+        if ($this->connections->containsKey($key)) {
+            return $this->connections->get($key);
+        }
+
+        return null;
+    }
+
+    /**
      * @param array $connection
+     * @param null|string $alternativeKey
      * @throws \InvalidArgumentException
      */
-    public function updateConnection(array $connection)
+    public function updateConnection(array $connection, $alternativeKey = null)
     {
-        if (! $this->connections->containsKey($connection['dbname'])) throw new \InvalidArgumentException(sprintf('Connection for DB %s can not be found', $connection['dbname']));
+        if (is_null($alternativeKey)) {
+            if (! isset($connection['dbname'])) {
+                throw new \InvalidArgumentException('Missing dbname key in connection configuration');
+            }
 
-        $this->connections->set($connection['dbname'], DbalConnection::fromConfiguration($connection));
+            $connectionObj = $this->findByDbName($connection['dbname']);
+
+            if (! $connectionObj) {
+                throw new \InvalidArgumentException('No connection found for db: ' . $connection['dbname']);
+            }
+
+            $alternativeKey = $this->connections->indexOf($connectionObj);
+        }
+
+        Assertion::string($alternativeKey);
+
+        if (! $this->connections->containsKey($alternativeKey)) throw new \InvalidArgumentException(sprintf('Connection for DB %s can not be found', $connection['dbname']));
+
+        $this->connections->set($alternativeKey, DbalConnection::fromConfiguration($connection));
 
         $this->saveConnections();
     }

@@ -32,13 +32,18 @@ final class DbalConnectionCollection extends ArrayCollection
             )
         );
     }
+
     /**
      * @param DbalConnection $connection
+     * @param null|string $alternativeKey If null then the dbname is used as key
      * @return void
      */
-    public function add($connection)
+    public function add($connection, $alternativeKey = null)
     {
-        $this->set($connection->config()['dbname'], $connection);
+        if (is_null($alternativeKey)) {
+            $alternativeKey = $connection->config()['dbname'];
+        }
+        $this->set($alternativeKey, $connection);
     }
 
     /**
@@ -47,7 +52,7 @@ final class DbalConnectionCollection extends ArrayCollection
      */
     public function set($key, $connection)
     {
-        Assertion::string($key, "Dbal connection key must be dbname");
+        Assertion::string($key, "Dbal connection key should be a string");
         Assertion::isInstanceOf($connection, 'Prooph\Link\SqlConnector\Service\DbalConnection');
 
         parent::set($key, $connection);
@@ -63,9 +68,9 @@ final class DbalConnectionCollection extends ArrayCollection
         $connections = array();
 
         /** @var $connection DbalConnection */
-        foreach ($this as $dbname => $connection)
+        foreach ($this as $key => $connection)
         {
-            $connections[$dbname] = $connection->config();
+            $connections[$key] = $connection->config();
         }
 
         return $connections;
