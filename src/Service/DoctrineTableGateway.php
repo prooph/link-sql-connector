@@ -11,6 +11,8 @@
 
 namespace Prooph\Link\SqlConnector\Service;
 
+use Prooph\Common\Event\ActionEventDispatcher;
+use Prooph\Common\Event\ActionEventListenerAggregate;
 use Prooph\Link\Application\DataType\SqlConnector\TableRow;
 use Prooph\Link\Application\SharedKernel\MessageMetadata;
 use Doctrine\DBAL\Connection;
@@ -83,25 +85,6 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
     const OPERAND_LIKE_CI = "ilike";
 
     /**
-     * If filters are not enough to fetch the right data you can also provide a link to a file that provides a callable which modifies the query.
-     * The callable should take two arguments the Doctrine\DBAL\Query\QueryBuilder and the metadata array.
-     * It should directly operate on the query builder.
-     *
-     * Note: The table of the requested processing type is aliased as "main"
-     * Note: Don't set limit, offset or order_by. Use metadata for these settings, because the TableGateway performs also a count query without offset, limit and order_by
-     *       but with all filters applied.
-     *
-     * example query builder script:
-     * <code>
-     * //Return a callable from the script
-     * return function(\Doctrine\DBAL\Query\QueryBuilder $query, array $metadata) {
-     *   $query->orWhere($query->exp()->eq('vip', 1));
-     * };
-     * </code>
-     */
-    const META_QUERY_BUILDER_SCRIPT = "query_builder_script";
-
-    /**
      * Set the query offset.
      */
     const META_OFFSET = MessageMetadata::OFFSET;
@@ -132,16 +115,6 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
     const META_TRY_UPDATE = "try_update";
 
     /**
-     * @var CommandBus
-     */
-    private $commandBus;
-
-    /**
-     * @var EventBus
-     */
-    private $eventBus;
-
-    /**
      * @var Connection
      */
     private $connection;
@@ -152,13 +125,33 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
     private $table;
 
     /**
-     * @param Connection $connection
-     * @param $table
+     * @var ActionEventDispatcher
      */
-    public function __construct(Connection $connection, $table)
+    private $actions;
+
+    /**
+     * @var bool
+     */
+    private $triggerActions = false;
+
+    /**
+     * @param Connection $connection
+     * @param string $table
+     * @param ActionEventDispatcher $eventDispatcher
+     * @param ActionEventListenerAggregate[] $listeners
+     */
+    public function __construct(Connection $connection, $table, ActionEventDispatcher $eventDispatcher = null, array $listeners = null)
     {
         $this->connection = $connection;
         $this->table      = $table;
+        $this->actions    = $eventDispatcher;
+        $this->triggerActions = ! is_null($eventDispatcher);
+
+        if ($eventDispatcher && $listeners) {
+            foreach ($listeners as $listenerAggregate) {
+                $this->actions->attachListenerAggregate($listenerAggregate);
+            }
+        }
     }
 
     /**
@@ -243,6 +236,20 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
             $this->addFilter($query, $itemType::toDbColumnName($identifierName), '=', $metadata['identifier'], 1000);
         }
 
+        if ($this->triggerActions) {
+            $action = $this->actions->getNewActionEvent('collect_single_result', $this, [
+                'workflow_message' => $workflowMessage,
+                'item_type' => $itemType,
+                'query' => $query
+            ]);
+
+            $this->actions->dispatch($action);
+
+            //Maybe item type or query were changed by a listener?
+            $itemType = $action->getParam('item_type');
+            $query = $action->getParam('query', $query);
+        }
+
         $itemData = $query->execute()->fetch();
 
         if (is_null($itemData)) {
@@ -266,6 +273,22 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
 
         $query = $this->buildQueryFromMetadata($itemType, $workflowMessage->metadata());
 
+        if ($this->triggerActions) {
+            $action = $this->actions->getNewActionEvent('collect_result_set', $this, [
+                'workflow_message' => $workflowMessage,
+                'item_type' => $itemType,
+                'collection_type' => $collectionType,
+                'query' => $query
+            ]);
+
+            $this->actions->dispatch($action);
+
+            //Maybe item/collection type or query were changed by a listener?
+            $itemType = $action->getParam('item_type');
+            $collectionType = $action->getParam('collection_type');
+            $query = $action->getParam('query', $query);
+        }
+
         $stmt = $query->execute();
 
         //Premap row, so that factory fromDatabaseRow is used to construct the TableRow type
@@ -286,6 +309,18 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
     private function countRows($itemType, array $metadata)
     {
         $query = $this->buildQueryFromMetadata($itemType, $metadata, true);
+
+        if ($this->triggerActions) {
+            $action = $this->actions->getNewActionEvent('count_rows', $this, [
+                'item_type' => $itemType,
+                'query' => $query
+            ]);
+
+            $this->actions->dispatch($action);
+
+            //Maybe query was changed by a listener?
+            $query = $action->getParam('query', $query);
+        }
 
         return $query->execute()->fetchColumn();
     }
@@ -332,11 +367,6 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
                     $this->addFilter($query, $column, '=', $value, $filterCount);
                 }
             }
-        }
-
-        if (isset($metadata[self::META_QUERY_BUILDER_SCRIPT]) && file_exists($metadata[self::META_QUERY_BUILDER_SCRIPT])) {
-            $queryBuilderFunc = include($metadata[self::META_QUERY_BUILDER_SCRIPT]);
-            if (is_callable($queryBuilderFunc)) $queryBuilderFunc($query, $metadata);
         }
 
         if (! $countMode) {

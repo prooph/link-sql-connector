@@ -11,6 +11,7 @@
 
 namespace ProophTest\Link\SqlConnector\Service;
 
+use Prooph\Common\Event\ZF2\Zf2ActionEventDispatcher;
 use Prooph\Link\Application\SharedKernel\MessageMetadata;
 use Prooph\Processing\Message\LogMessage;
 use Prooph\Processing\Message\WorkflowMessage;
@@ -21,6 +22,7 @@ use Prooph\Processing\Processor\ProophPlugin\WorkflowProcessorInvokeStrategy;
 use Prooph\Processing\Processor\RegistryWorkflowEngine;
 use Prooph\Processing\Processor\Task\TaskListId;
 use Prooph\Processing\Processor\Task\TaskListPosition;
+use Prooph\Processing\Processor\WorkflowEngine;
 use Prooph\ServiceBus\CommandBus;
 use Prooph\ServiceBus\EventBus;
 use Prooph\Link\SqlConnector\Service\DoctrineTableGateway;
@@ -29,6 +31,7 @@ use ProophTest\Link\SqlConnector\DataType\TestUserCollection;
 use ProophTest\Link\SqlConnector\Fixture\UsersFixture;
 use ProophTest\Link\SqlConnector\Mock\StupidWorkflowProcessorMock;
 use ProophTest\Link\SqlConnector\TestCase;
+use ProophTest\Link\SqlConnector\Mock\TableGatewayListenerAggregate;
 
 /**
  * Class DoctrineTableGatewayTest
@@ -49,6 +52,11 @@ final class DoctrineTableGatewayTest extends TestCase
      * @var EventBus
      */
     private $eventBus;
+
+    /**
+     * @var WorkflowEngine
+     */
+    private $workflowEngine;
 
     /**
      * @var StupidWorkflowProcessorMock
@@ -80,17 +88,18 @@ final class DoctrineTableGatewayTest extends TestCase
 
         $this->tableGateway = new DoctrineTableGateway($this->getDbalConnection(), self::TEST_TABLE);
 
-        $workflowEngine = new RegistryWorkflowEngine();
+        $this->workflowEngine = new RegistryWorkflowEngine();
 
-        $workflowEngine->registerCommandBus($this->commandBus, [NodeName::defaultName()->toString(), 'test-case']);
-        $workflowEngine->registerEventBus($this->eventBus, [NodeName::defaultName()->toString(), 'test-case']);
+        $this->workflowEngine->registerCommandBus($this->commandBus, [NodeName::defaultName()->toString(), 'test-case']);
+        $this->workflowEngine->registerEventBus($this->eventBus, [NodeName::defaultName()->toString(), 'test-case']);
 
-        $this->tableGateway->useWorkflowEngine($workflowEngine);
+        $this->tableGateway->useWorkflowEngine($this->workflowEngine);
     }
 
     protected function tearDown()
     {
         UsersFixture::dropTable($this->getDbalConnection());
+        TableGatewayListenerAggregate::resetAttachedFlag();
         $this->messageReceiver->reset();
     }
 
@@ -232,6 +241,47 @@ final class DoctrineTableGatewayTest extends TestCase
         $message->connectToProcessTask($taskListPosition);
 
         $this->tableGateway->handleWorkflowMessage($message);
+
+        $this->assertInstanceOf('Prooph\Processing\Message\WorkflowMessage', $this->messageReceiver->getLastReceivedMessage());
+
+        /** @var $wfMessage WorkflowMessage */
+        $wfMessage = $this->messageReceiver->getLastReceivedMessage();
+
+        $userCollection = $wfMessage->payload()->toType();
+
+        $this->assertInstanceOf('ProophTest\Link\SqlConnector\DataType\TestUserCollection', $userCollection);
+
+        $this->assertEquals(2, count($userCollection->value()));
+        $this->assertEquals(2, $wfMessage->metadata()['total_items']);
+        $this->assertEquals(
+            ['John Doe', 'Max Mustermann'],
+            array_map(
+                function (TestUser $user) { return $user->property('name')->value(); },
+                $userCollection->value()
+            )
+        );
+    }
+
+    /**
+     * @test
+     */
+    function it_filters_users_by_a_between_filter_set_by_an_action_event_listener()
+    {
+        $taskListPosition = TaskListPosition::at(TaskListId::linkWith(NodeName::defaultName(), ProcessId::generate()), 1);
+
+        $eventDispatcher = new Zf2ActionEventDispatcher();
+
+        $tableGateway = new DoctrineTableGateway($this->getDbalConnection(), self::TEST_TABLE, $eventDispatcher, [
+            new TableGatewayListenerAggregate()
+        ]);
+
+        $tableGateway->useWorkflowEngine($this->workflowEngine);
+
+        $message = WorkflowMessage::collectDataOf(TestUserCollection::prototype(), 'test-case', 'localhost');
+
+        $message->connectToProcessTask($taskListPosition);
+
+        $tableGateway->handleWorkflowMessage($message);
 
         $this->assertInstanceOf('Prooph\Processing\Message\WorkflowMessage', $this->messageReceiver->getLastReceivedMessage());
 

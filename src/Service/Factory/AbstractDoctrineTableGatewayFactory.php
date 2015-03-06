@@ -12,6 +12,8 @@
 namespace Prooph\Link\SqlConnector\Service\Factory;
 
 use Doctrine\DBAL\DriverManager;
+use Prooph\Common\Event\ActionEventListenerAggregate;
+use Prooph\Common\Event\ZF2\Zf2ActionEventDispatcher;
 use Prooph\Link\SqlConnector\Service\DoctrineTableGateway;
 use Prooph\Link\Application\Projection\ProcessingConfig;
 use Zend\ServiceManager\AbstractFactoryInterface;
@@ -70,9 +72,43 @@ final class AbstractDoctrineTableGatewayFactory implements AbstractFactoryInterf
 
         if (! isset($appConfig['prooph.link.sqlconnector']['connections'][$connector['dbal_connection']])) throw new \InvalidArgumentException(sprintf('The DBAL connection %s can not be found. Please check config/autoload/sqlconnector.local.php!', $connector['dbal_connection']));
 
+        $actionEventDispatcher = null;
+        $listeners = null;
+
+        if (isset($appConfig['prooph.link.sqlconnector']['action_listeners'][$requestedName])) {
+            $actionEventDispatcher = new Zf2ActionEventDispatcher([$requestedName]);
+
+            if (! is_array($appConfig['prooph.link.sqlconnector']['action_listeners'][$requestedName])) {
+                throw new \InvalidArgumentException(
+                    sprintf(
+                        "Key prooph.link.sqlconnector.action_listeners.$requestedName of config should be of type array. Got %s",
+                        gettype($appConfig['prooph.link.sqlconnector']['action_listeners'][$requestedName])
+                    )
+                );
+            }
+
+            foreach ($appConfig['prooph.link.sqlconnector']['action_listeners'][$requestedName] as $listenerAlias) {
+                $listenerAggregate = $serviceLocator->get($listenerAlias);
+
+                if (! $listenerAggregate instanceof ActionEventListenerAggregate) {
+                    throw new \InvalidArgumentException(
+                        sprintf(
+                            "Action listeners for sqlconnector %s should be of type Prooph\\Common\\ActionEventListenerAggregate. Got %s",
+                            $requestedName,
+                            (is_object($listenerAggregate))? get_class($listenerAggregate) : gettype($listenerAggregate)
+                        )
+                    );
+                }
+
+                $listeners[] = $listenerAggregate;
+            }
+        }
+
         return new DoctrineTableGateway(
             DriverManager::getConnection($appConfig['prooph.link.sqlconnector']['connections'][$connector['dbal_connection']]),
-            $connector['table']
+            $connector['table'],
+            $actionEventDispatcher,
+            $listeners
         );
     }
 }

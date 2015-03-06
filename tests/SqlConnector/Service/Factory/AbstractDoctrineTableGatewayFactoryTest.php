@@ -12,6 +12,7 @@
 namespace ProophTest\Link\SqlConnector\Service\Factory;
 
 use ProophTest\Link\SqlConnector\Bootstrap;
+use ProophTest\Link\SqlConnector\Mock\TableGatewayListenerAggregate;
 use ProophTest\Link\SqlConnector\TestCase;
 
 /**
@@ -22,14 +23,23 @@ use ProophTest\Link\SqlConnector\TestCase;
  */
 final class AbstractDoctrineTableGatewayFactoryTest extends TestCase
 {
+    protected function tearDown()
+    {
+        TableGatewayListenerAggregate::resetAttachedFlag();
+    }
+
     /**
      * @test
      */
     public function it_creates_a_doctrine_table_gateway()
     {
+        $this->assertFalse(TableGatewayListenerAggregate::isAttached());
+
         $tableGateway = Bootstrap::getServiceManager()->get('sqlconnector:::processing_test_users');
 
         $this->assertInstanceOf('Prooph\Link\SqlConnector\Service\DoctrineTableGateway', $tableGateway);
+
+        $this->assertTrue(TableGatewayListenerAggregate::isAttached());
     }
 }
  

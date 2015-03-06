@@ -38,6 +38,16 @@ return [
                 'driver' => 'pdo_sqlite',
                 'memory' => true
             ]
+        ],
+        'action_listeners' => [
+            'sqlconnector:::processing_test_users' => [
+                \ProophTest\Link\SqlConnector\Mock\TableGatewayListenerAggregate::class,
+            ]
+        ]
+    ],
+    'service_manager' => [
+        'invokables' => [
+            \ProophTest\Link\SqlConnector\Mock\TableGatewayListenerAggregate::class => \ProophTest\Link\SqlConnector\Mock\TableGatewayListenerAggregate::class,
         ]
     ]
 ];
