@@ -29,7 +29,7 @@ use Prooph\Link\Application\Command\AddConnectorToConfig;
  * Class TableConnectorGeneratorTest
  *
  * @package SqlConnectorTest\Service
- * @author Alexander Miertsch <alexander.miertsch.extern@sixt.com>
+ * @author Alexander Miertsch <kontakt@codeliner.ws>
  */
 final class TableConnectorGeneratorTest extends TestCase
 {

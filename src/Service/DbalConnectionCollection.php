@@ -19,7 +19,7 @@ use Doctrine\Common\Collections\ArrayCollection;
  * @method DbalConnection get($key)
  *
  * @package SqlConnector\Service
- * @author Alexander Miertsch <alexander.miertsch.extern@sixt.com>
+ * @author Alexander Miertsch <kontakt@codeliner.ws>
  */
 final class DbalConnectionCollection extends ArrayCollection
 {

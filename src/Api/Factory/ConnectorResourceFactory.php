@@ -18,7 +18,7 @@ use Zend\ServiceManager\ServiceLocatorInterface;
  * Class ConnectorResourceFactory
  *
  * @package SqlConnector\Api\Factory
- * @author Alexander Miertsch <alexander.miertsch.extern@sixt.com>
+ * @author Alexander Miertsch <kontakt@codeliner.ws>
  */
 final class ConnectorResourceFactory implements FactoryInterface
 {

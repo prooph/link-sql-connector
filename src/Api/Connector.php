@@ -18,7 +18,7 @@ use Prooph\Link\SqlConnector\Service\TableConnectorGenerator;
  * Class Connector
  *
  * @package SqlConnector\Api
- * @author Alexander Miertsch <alexander.miertsch.extern@sixt.com>
+ * @author Alexander Miertsch <kontakt@codeliner.ws>
  */
 final class Connector extends AbstractRestController
 {

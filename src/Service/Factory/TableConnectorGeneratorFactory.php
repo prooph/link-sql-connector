@@ -18,7 +18,7 @@ use Zend\ServiceManager\ServiceLocatorInterface;
  * Class TableConnectorGeneratorFactory
  *
  * @package SqlConnector\Service\Factory
- * @author Alexander Miertsch <alexander.miertsch.extern@sixt.com>
+ * @author Alexander Miertsch <kontakt@codeliner.ws>
  */
 final class TableConnectorGeneratorFactory implements FactoryInterface
 {

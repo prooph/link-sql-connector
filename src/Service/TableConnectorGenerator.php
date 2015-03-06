@@ -28,7 +28,7 @@ use Prooph\Link\Application\Command\ChangeConnectorConfig;
  * and stores the definition in the processing config.
  *
  * @package SqlConnector\Service
- * @author Alexander Miertsch <alexander.miertsch.extern@sixt.com>
+ * @author Alexander Miertsch <kontakt@codeliner.ws>
  */
 final class TableConnectorGenerator 
 {
