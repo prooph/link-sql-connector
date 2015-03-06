@@ -741,5 +741,176 @@ final class DoctrineTableGatewayTest extends TestCase
 
         $this->assertEquals($expectedUsers, $userResultSet);
     }
+
+    /**
+     * @test
+     */
+    function it_updates_existing_row_by_identifying_it_with_the_help_of_a_listener()
+    {
+        $taskListPosition = TaskListPosition::at(TaskListId::linkWith(NodeName::defaultName(), ProcessId::generate()), 1);
+
+        $eventDispatcher = new Zf2ActionEventDispatcher();
+
+        $tableGateway = new DoctrineTableGateway($this->getDbalConnection(), self::TEST_TABLE, $eventDispatcher, [
+            new TableGatewayListenerAggregate()
+        ]);
+
+        $tableGateway->useWorkflowEngine($this->workflowEngine);
+
+        $metadata = [DoctrineTableGateway::META_TRY_UPDATE => true];
+
+        $users = TestUserCollection::fromNativeValue([
+            [
+                'id' => null,
+                'name' => 'John Doe',
+                'age' => 29 //Change age from 32 to 29, will get a new id
+            ],
+            //Should be added as a new entry
+            [
+                'id' => null,
+                'name' => 'Maxi Mustermann',
+                'age' => 41
+            ],
+        ]);
+
+        $message = WorkflowMessage::newDataCollected($users, 'test-case', 'localhost');
+
+        $message->connectToProcessTask($taskListPosition);
+
+        $message = $message->prepareDataProcessing($taskListPosition, 'localhost', $metadata);
+
+        $tableGateway->handleWorkflowMessage($message);
+
+        $this->assertInstanceOf('Prooph\Processing\Message\WorkflowMessage', $this->messageReceiver->getLastReceivedMessage());
+
+        /** @var $message WorkflowMessage */
+        $message = $this->messageReceiver->getLastReceivedMessage();
+
+        $metadata = $message->metadata();
+
+        $this->assertTrue(isset($metadata[MessageMetadata::SUCCESSFUL_ITEMS]));
+        $this->assertEquals(2, $metadata[MessageMetadata::SUCCESSFUL_ITEMS]);
+
+        $this->assertTrue(isset($metadata[MessageMetadata::FAILED_ITEMS]));
+        $this->assertEquals(0, $metadata[MessageMetadata::FAILED_ITEMS]);
+
+        $this->assertTrue(isset($metadata[MessageMetadata::FAILED_MESSAGES]));
+        $this->assertEmpty($metadata[MessageMetadata::FAILED_MESSAGES]);
+
+        $query = $this->getDbalConnection()->createQueryBuilder();
+
+        $userResultSet = $query->select('*')->from(self::TEST_TABLE)->execute()->fetchAll();
+
+        $this->assertEquals(4, count($userResultSet));
+
+        $expectedUsers = [
+            [
+                'id' => '2',
+                'name' => 'Max Mustermann',
+                'age' => '41'
+            ],
+            [
+                'id' => '3',
+                'name' => 'Donald Duck',
+                'age' => '57'
+            ],
+            [
+                'id' => '4',
+                'name' => 'John Doe',
+                'age' => '29'
+            ],
+            [
+                'id' => '5',
+                'name' => 'Maxi Mustermann',
+                'age' => '41'
+            ],
+        ];
+
+        $this->assertEquals($expectedUsers, $userResultSet);
+    }
+
+    /**
+     * @test
+     */
+    function it_does_not_perform_the_delete_query_when_no_listener_adds_a_condition()
+    {
+        $taskListPosition = TaskListPosition::at(TaskListId::linkWith(NodeName::defaultName(), ProcessId::generate()), 1);
+
+        $metadata = [DoctrineTableGateway::META_TRY_UPDATE => true];
+
+        $users = TestUserCollection::fromNativeValue([
+            [
+                'id' => null,
+                'name' => 'John Doe',
+                'age' => 29 //Change age from 32 to 29, will get a new id, but John Doe will be duplicate
+            ],
+            //Should be added as a new entry
+            [
+                'id' => null,
+                'name' => 'Maxi Mustermann',
+                'age' => 41
+            ],
+        ]);
+
+        $message = WorkflowMessage::newDataCollected($users, 'test-case', 'localhost');
+
+        $message->connectToProcessTask($taskListPosition);
+
+        $message = $message->prepareDataProcessing($taskListPosition, 'localhost', $metadata);
+
+        $this->tableGateway->handleWorkflowMessage($message);
+
+        $this->assertInstanceOf('Prooph\Processing\Message\WorkflowMessage', $this->messageReceiver->getLastReceivedMessage());
+
+        /** @var $message WorkflowMessage */
+        $message = $this->messageReceiver->getLastReceivedMessage();
+
+        $metadata = $message->metadata();
+
+        $this->assertTrue(isset($metadata[MessageMetadata::SUCCESSFUL_ITEMS]));
+        $this->assertEquals(2, $metadata[MessageMetadata::SUCCESSFUL_ITEMS]);
+
+        $this->assertTrue(isset($metadata[MessageMetadata::FAILED_ITEMS]));
+        $this->assertEquals(0, $metadata[MessageMetadata::FAILED_ITEMS]);
+
+        $this->assertTrue(isset($metadata[MessageMetadata::FAILED_MESSAGES]));
+        $this->assertEmpty($metadata[MessageMetadata::FAILED_MESSAGES]);
+
+        $query = $this->getDbalConnection()->createQueryBuilder();
+
+        $userResultSet = $query->select('*')->from(self::TEST_TABLE)->execute()->fetchAll();
+
+        $this->assertEquals(5, count($userResultSet));
+
+        $expectedUsers = [
+            [
+                'id' => '1',
+                'name' => 'John Doe',
+                'age' => '34'
+            ],
+            [
+                'id' => '2',
+                'name' => 'Max Mustermann',
+                'age' => '41'
+            ],
+            [
+                'id' => '3',
+                'name' => 'Donald Duck',
+                'age' => '57'
+            ],
+            [
+                'id' => '4',
+                'name' => 'John Doe',
+                'age' => '29'
+            ],
+            [
+                'id' => '5',
+                'name' => 'Maxi Mustermann',
+                'age' => '41'
+            ],
+        ];
+
+        $this->assertEquals($expectedUsers, $userResultSet);
+    }
 }
  

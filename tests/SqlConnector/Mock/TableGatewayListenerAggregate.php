@@ -51,8 +51,14 @@ final class TableGatewayListenerAggregate implements ActionEventListenerAggregat
      */
     public function attach(ActionEventDispatcher $dispatcher)
     {
+        //Used within the test:
+        //DoctrineTableGatewayTest::it_filters_users_by_a_between_filter_set_by_an_action_event_listener
         $this->trackHandler($dispatcher->attachListener('collect_result_set', [$this, 'onCollectResultSet']));
         $this->trackHandler($dispatcher->attachListener('count_rows', [$this, 'onCountRows']));
+
+        //Used within the test:
+        //DoctrineTableGatewayTest::it_does_not_perform_the_delete_query_when_no_listener_adds_a_condition
+        $this->trackHandler($dispatcher->attachListener('delete_table_row', [$this, 'onDeleteTableRow']));
 
         self::$isAttached = true;
     }
@@ -84,6 +90,20 @@ final class TableGatewayListenerAggregate implements ActionEventListenerAggregat
             $query = $event->getParam('query');
 
             $this->addBetweenFilter($query);
+        }
+    }
+
+    /**
+     * @param ActionEvent $event
+     */
+    public function onDeleteTableRow(ActionEvent $event)
+    {
+        if ($event->getParam('item_type') === TestUser::class) {
+            /** @var $query QueryBuilder */
+            $query = $event->getParam('query');
+            $data  = $event->getParam('item_db_data');
+
+            $query->where($query->expr()->eq('name', ':name'))->setParameter('name', $data['name']);
         }
     }
 

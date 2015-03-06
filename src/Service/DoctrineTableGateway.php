@@ -18,6 +18,7 @@ use Prooph\Link\Application\SharedKernel\MessageMetadata;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Driver\Statement;
 use Doctrine\DBAL\Query\QueryBuilder;
+use Prooph\Link\SqlConnector\Helper\Table;
 use Prooph\Processing\Functional\Iterator\MapIterator;
 use Prooph\Processing\Message\AbstractWorkflowMessageHandler;
 use Prooph\Processing\Message\ProcessingMessage;
@@ -113,6 +114,14 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
      * so use it only for delta updates.
      */
     const META_TRY_UPDATE = "try_update";
+
+    /**
+     * Commit insert, even if not all inserts were possible.
+     *
+     * An insert can fail due to duplicate keys or invalid data.
+     * With ignore_errors set to true all valid inserts are committed, otherwise everything is rolled back.
+     */
+    const META_IGNORE_ERRORS = "ignore_errors";
 
     /**
      * @var Connection
@@ -444,17 +453,38 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
     {
         $metadata = $message->metadata();
 
+        $copiedTableName = null;
+        $orgTableName = $this->table;
+
         if (isset($metadata[self::META_EMPTY_TABLE]) && $metadata[self::META_EMPTY_TABLE]) {
-            $this->emptyTable();
+            $copiedTableName = $this->copyTable();
+            //We override the target table to insert into the copy table first
+            $this->table = $copiedTableName;
         }
 
         $forceInsert = true;
 
-        if (isset($metadata[self::META_TRY_UPDATE]) && $metadata[self::META_TRY_UPDATE]) {
+        if (is_null($copiedTableName) && isset($metadata[self::META_TRY_UPDATE]) && $metadata[self::META_TRY_UPDATE]) {
             $forceInsert = false;
         }
 
-        return $this->updateOrInsertPayload($message, $forceInsert);
+        $message = $this->updateOrInsertPayload($message, $forceInsert);
+
+        $ignoreErrors = (isset($metadata[self::META_IGNORE_ERRORS]))? (bool)$metadata[self::META_IGNORE_ERRORS] : false;
+
+
+        if (! is_null($copiedTableName)) {
+            $this->table = $orgTableName;
+
+            if (!$ignoreErrors && $message instanceof LogMessage) {
+                $this->dropCopyTable($orgTableName);
+                return $message;
+            }
+
+            $this->replaceOrgTableWithCopy($orgTableName, $copiedTableName);
+        }
+
+        return $message;
     }
 
     /**
@@ -556,55 +586,58 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
 
         $dbTypes = $this->getDbTypesForProperties($data);
 
-        if ($id) {
+        $itemType = $data->prototype()->of();
 
-            $count = 0;
+        $data = $this->convertToDbData($data);
 
-            if (! $forceInsert) {
-                $query = $this->connection->createQueryBuilder();
+        //In try update mode we try to delete the table row first and then insert it again
+        if (! $forceInsert) {
+            $query = $this->connection->createQueryBuilder();
 
-                $query->select('COUNT(*)')
-                    ->from($this->table)
-                    ->where(
-                        $query->expr()->eq(
-                            $pk,
-                            ':identifier'
-                        )
-                    );
+            //Due to Sqlite error when using an alias we don't assign one here, so delete queries are limit to one table
+            //However, a action event listener can rebuild the query and use a platform specific delete with joins if required
+            $query->delete($this->table);
 
-                $query->setParameter('identifier', $id, $dbTypes[$pk]);
-
-                $count = $query->execute()->fetchColumn();
-            }
-
-            if ($count) {
-                //We add one additional type for the pk
-                $dbTypesArr = array_values($dbTypes);
-                $dbTypesArr[] = $dbTypes[$pk];
-
-                $this->connection->update(
-                    $this->table,
-                    $this->convertToDbData($data),
-                    [$pk => $id],
-                    $dbTypesArr
+            if ($id) {
+                $query->where(
+                    $query->expr()->eq(
+                        $pk,
+                        ':identifier'
+                    )
                 );
 
-                return $insertStmt;
+                $query->setParameter('identifier', $id, $dbTypes[$pk]);
+            } elseif ($this->triggerActions) {
+                $actionEvent = $this->actions->getNewActionEvent('delete_table_row', $this, [
+                    'query' => $query,
+                    'item_type' => $itemType,
+                    'item_db_data' => $data,
+                    'item_db_types' => $dbTypes,
+                    'skip_row' => false
+                ]);
+
+                $this->actions->dispatch($actionEvent);
+
+                if ($actionEvent->getParam('skip_row')) {
+                    return $insertStmt;
+                }
+
+                $query = $actionEvent->getParam('query');
+
+                if ($query && empty($query->getQueryPart('where'))) {
+                    $query = null;
+                }
             } else {
-                $data = $this->convertToDbData($data);
-
-                return $this->performInsert($data, $dbTypes, $insertStmt);
-            }
-        } else { //insert without id, useful if column is auto incremented or table has no pk
-            $data = $this->convertToDbData($data);
-
-            if ($pk) {
-                unset($data[$pk]);
-                unset($dbTypes[$pk]);
+                $query = null;
             }
 
-            return $this->performInsert($data, $dbTypes, $insertStmt);
+            //We only perform the delete query if it has at least one condition set.
+            if ($query) {
+                $query->execute();
+            }
         }
+
+        return $this->performInsert($data, $dbTypes, $insertStmt);
     }
 
     /**
@@ -667,31 +700,39 @@ final class DoctrineTableGateway extends AbstractWorkflowMessageHandler
         return $dbTypes;
     }
 
-    private function emptyTable()
+    private function copyTable()
     {
-        $foreignKeys = [];
+        $sm = $this->connection->getSchemaManager();
 
-        $dbPlatform = $this->connection->getDatabasePlatform();
+        $fromSchema = $sm->createSchema();
 
-        if ($dbPlatform->supportsForeignKeyConstraints()) {
-            $sm = $this->connection->getSchemaManager();
+        $orgTable = $fromSchema->getTable($this->table);
 
-            $foreignKeys = $sm->listTableForeignKeys($this->table);
-
-            foreach ($foreignKeys as $foreignKey) {
-                $sm->dropForeignKey($foreignKey, $this->table);
-            }
+        $copyTableName = '__' . $this->table. '1';
+        $count = 1;
+        while ($fromSchema->hasTable($copyTableName)) {
+            $copyTableName .= ++$count;
         }
 
-        $q = $dbPlatform->getTruncateTableSql($this->table);
-        $this->connection->executeUpdate($q);
+        $copyTable = clone $orgTable;
 
-        if (! empty($foreignKeys)) {
-            $sm = $this->connection->getSchemaManager();
-            foreach ($foreignKeys as $foreignKey) {
-                $sm->createForeignKey($foreignKey, $this->table);
-            }
-        }
+        Table::rename($copyTable, $copyTableName);
+
+        $sm->createTable($copyTable);
+
+        return $copyTableName;
+    }
+
+    private function dropCopyTable($copiedTableName)
+    {
+        $this->connection->getSchemaManager()->dropTable($copiedTableName);
+    }
+
+    private function replaceOrgTableWithCopy($orgTableName, $copiedTableName)
+    {
+        $this->connection->getSchemaManager()->dropTable($orgTableName);
+
+        $this->connection->getSchemaManager()->renameTable($copiedTableName, $orgTableName);
     }
 }
  
