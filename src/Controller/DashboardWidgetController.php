@@ -38,10 +38,11 @@ final class DashboardWidgetController extends AbstractWidgetController
         }
 
         return DashboardWidget::initialize(
-            'prooph.link.sqlconnector/dashboard/widget',
-            'Sql Table Connector',
-            4,
-            ['processingConfig' => $this->systemConfig, 'sqlConnectors' => $connectors]
+            $this->widgetConfig->get('template', 'prooph.link.sqlconnector/dashboard/widget'),
+            $this->widgetConfig->get('title', 'Sql Table Connector'),
+            $this->widgetConfig->get('cols', 4),
+            ['processingConfig' => $this->systemConfig, 'sqlConnectors' => $connectors],
+            $this->widgetConfig->get('group_title')
         );
     }
 }
