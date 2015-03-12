@@ -169,6 +169,7 @@ final class TableConnectorGenerator
      * @param string $dbname
      * @param string $table
      * @param Connection $connection
+     * @throws \RuntimeException
      * @return array
      */
     private function generateProcessingTypesIfNotExist($dbname, $table, Connection $connection)
@@ -187,6 +188,25 @@ final class TableConnectorGenerator
             $namespace . '\\' . $collectionClassName,
             $this->generateRowCollectionTypeClass($namespace, $collectionClassName, $rowClassName)
         );
+
+
+        $tableRowClassName = 'Prooph\Link\Application\DataType\SqlConnector\TableRow';
+
+        if (! class_exists($tableRowClassName)) {
+            $file = __DIR__ . '/../../data/Application/DataType/SqlConnector/TableRow.php';
+
+            if (! file_exists($file)) {
+                throw new \RuntimeException(sprintf(
+                    'Class %s is not available, neither in the application data type location nor in the SqlConnector module',
+                    $tableRowClassName
+                ));
+            }
+
+            $this->dataTypeLocation->addDataTypeClass(
+                $tableRowClassName,
+                file_get_contents($file)
+            );
+        }
 
         return [
             $namespace . '\\' . $rowClassName,
