@@ -94,7 +94,9 @@
 <script type="text/javascript">
     function (context) {
         var self = this,
-            parent = context.ProcessManager,
+            handlerData = context.handlerData,
+            handlerDeferred = context.handlerDeferred,
+            $modal = context["$modal"],
             __toFormFilter = function (filterKey, filterValue) {
                 //FilterValue is already an object so we only need to add the filterKey
                 if (_.isObject(filterValue)) {
@@ -110,6 +112,18 @@
                     'value' : filterValue
                 };
             };
+
+        $modal.on("hide.bs.modal", function () {
+            //Push back old metadata if deferred is not resolved yet
+            if (! handlerDeferred.promise.isFulfilled()) {
+                handlerDeferred.resolve(handlerData.task_metadata);
+            }
+        });
+
+        $modal.find(".btn-save").click(function () {
+            handlerDeferred.resolve(self.collectMetadata());
+            $modal.modal('hide');
+        });
 
 
         this.availableProcessingTypeProperties = [];
@@ -128,11 +142,11 @@
             return this.taskType == '<?php echo \Prooph\Processing\Processor\Definition::TASK_PROCESS_DATA  ?>';
         }
 
-        this.syncWithProcessManager = function (pm) {
-            this.connector = pm.getCurrentConnector();
-            this.processingType = pm.getCurrentProcessingType();
-            this.taskType = pm.getCurrentTaskType();
-            this.applyMetadata(pm.getMetadata());
+        this.syncWithProcessManager = function () {
+            this.connector = _.findWhere(context.app.connectors, {id : handlerData.processing_id});
+            this.processingType = _.findWhere(context.app.processingTypes, { value : handlerData.task_processing_type});
+            this.taskType = handlerData.task_type;
+            this.applyMetadata(handlerData.task_metadata);
             this.availableProcessingTypeProperties = this.findAvailableProcessingTypeProperties();
             this.availableOrderByProperties    = this.findAvailableOrderByProperties();
             this.syncedWithParent = true;
@@ -358,24 +372,7 @@
         }
 
         this.on("mount", function () {
-            this.syncWithProcessManager(parent);
+            this.syncWithProcessManager();
         });
-
-        this.on("update", function () {
-            if (this.syncedWithParent) {
-                parent.setMetadata(this.collectMetadata());
-            }
-        });
-
-        function onParentUpdate () {
-            self.syncWithProcessManager(parent);
-        };
-
-        parent.on("update", onParentUpdate);
-
-        this.on("unmount", function () {
-            parent.off("update", onParentUpdate);
-            parent.setMetadata({});
-        })
     }
 </script>
