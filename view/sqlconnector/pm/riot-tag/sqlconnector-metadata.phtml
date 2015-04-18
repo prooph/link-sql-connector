@@ -143,8 +143,8 @@
         }
 
         this.syncWithProcessManager = function () {
-            this.connector = _.findWhere(context.app.connectors, {id : handlerData.processing_id});
-            this.processingType = _.findWhere(context.app.processingTypes, { value : handlerData.task_processing_type});
+            this.connector = context.app.getConnector(handlerData.processing_id);
+            this.processingType = context.app.getProcessingType(handlerData.task_processing_type);
             this.taskType = handlerData.task_type;
             this.applyMetadata(handlerData.task_metadata);
             this.availableProcessingTypeProperties = this.findAvailableProcessingTypeProperties();
