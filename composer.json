@@ -21,7 +21,7 @@
     "require": {
         "php": ">=5.5",
         "prooph/link-app-core" : "dev-master",
-        "prooph/common" : "~1.5",
+        "prooph/common" : "~2.0",
         "doctrine/doctrine-orm-module": "~0.8.0"
     },
     "require-dev": {
