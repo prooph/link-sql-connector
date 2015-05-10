@@ -10,6 +10,7 @@
  */
 namespace Prooph\Link\SqlConnector\Service;
 
+use Prooph\Link\Application\Projection\ProcessingConfig;
 use Prooph\Link\Application\SharedKernel\ApplicationDataTypeLocation;
 use Prooph\Link\Application\SharedKernel\ConfigLocation;
 use Assert\Assertion;
@@ -34,6 +35,7 @@ final class TableConnectorGenerator
 {
     const TAB = "    ";
     const ICON = "glyphicon-hdd";
+    const ICON_TYPE = "glyphicon";
     const METADATA_UI_KEY = "sqlconnector-metadata";
 
     /**
@@ -57,6 +59,11 @@ final class TableConnectorGenerator
     private $dbalConnections;
 
     /**
+     * @var ProcessingConfig
+     */
+    private $processingConfig;
+
+    /**
      * @var array
      */
     private $doctrineProcessingTypeMap;
@@ -72,12 +79,14 @@ final class TableConnectorGenerator
         DbalConnectionCollection $dbalConnections,
         ApplicationDataTypeLocation $dataTypeLocation,
         ConfigLocation $configLocation,
+        ProcessingConfig $processingConfig,
         CommandBus $commandBus,
         array $doctrineProcessingTypeMap
     ) {
         $this->dbalConnections = $dbalConnections;
         $this->dataTypeLocation = $dataTypeLocation;
         $this->configLocation = $configLocation;
+        $this->processingConfig = $processingConfig;
         $this->commandBus = $commandBus;
         $this->doctrineProcessingTypeMap = $doctrineProcessingTypeMap;
     }
@@ -104,7 +113,9 @@ final class TableConnectorGenerator
         unset($connector['name']);
 
         $connector['icon'] = self::ICON;
+        $connector['icon_type'] = self::ICON_TYPE;
         $connector['ui_metadata_riot_tag'] = self::METADATA_UI_KEY;
+        $connector['node_name'] = $this->processingConfig->getNodeName();
 
         $addConnector = AddConnectorToConfig::fromDefinition(
             $id,

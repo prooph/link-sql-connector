@@ -34,6 +34,7 @@ final class TableConnectorGeneratorFactory implements FactoryInterface
             $serviceLocator->get('prooph.link.sqlconnector.dbal_connections'),
             $serviceLocator->get('prooph.link.app.data_type_location'),
             $serviceLocator->get('prooph.link.app.config_location'),
+            $serviceLocator->get('processing_config'),
             $serviceLocator->get('proophessor.command_bus'),
             $serviceLocator->get("config")['prooph.link.sqlconnector']['doctrine_processing_type_map']
         );
