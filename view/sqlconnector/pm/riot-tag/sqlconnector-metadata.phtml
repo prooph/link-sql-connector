@@ -135,34 +135,34 @@
         this.tick = function () {};
 
         this.isExport = function () {
-            return this.taskType == '<?php echo \Prooph\Processing\Processor\Definition::TASK_COLLECT_DATA  ?>';
+            return self.taskType == '<?php echo \Prooph\Processing\Processor\Definition::TASK_COLLECT_DATA  ?>';
         }
 
         this.isImport = function () {
-            return this.taskType == '<?php echo \Prooph\Processing\Processor\Definition::TASK_PROCESS_DATA  ?>';
+            return self.taskType == '<?php echo \Prooph\Processing\Processor\Definition::TASK_PROCESS_DATA  ?>';
         }
 
         this.syncWithProcessManager = function () {
-            this.connector = context.app.getConnector(handlerData.processing_id);
-            this.processingType = context.app.getProcessingType(handlerData.task_processing_type);
-            this.taskType = handlerData.task_type;
-            this.applyMetadata(handlerData.task_metadata);
-            this.availableProcessingTypeProperties = this.findAvailableProcessingTypeProperties();
-            this.availableOrderByProperties    = this.findAvailableOrderByProperties();
-            this.syncedWithParent = true;
-            this.update();
+            self.connector = context.app.getConnector(handlerData.processing_id);
+            self.processingType = context.app.getProcessingType(handlerData.task_processing_type);
+            self.taskType = handlerData.task_type;
+            self.applyMetadata(handlerData.task_metadata);
+            self.availableProcessingTypeProperties = self.findAvailableProcessingTypeProperties();
+            self.availableOrderByProperties    = self.findAvailableOrderByProperties();
+            self.syncedWithParent = true;
+            self.update();
         }
 
         this.isSingleResultType = function () {
-            if (! this.processingType) return false;
+            if (! self.processingType) return false;
 
-            return this.processingType.native_type !== "collection";
+            return self.processingType.native_type !== "collection";
         }
 
         this.findAvailableProcessingTypeProperties = function () {
-            if (! this.processingType) return [];
+            if (! self.processingType) return [];
 
-            var processingTypeObj = this.processingType;
+            var processingTypeObj = self.processingType;
 
             if (processingTypeObj.native_type === "collection") processingTypeObj = processingTypeObj.properties.item;
 
@@ -176,9 +176,9 @@
         }
 
         this.findAvailableOrderByProperties = function () {
-            var processingTypeProperties = this.findAvailableProcessingTypeProperties();
+            var processingTypeProperties = self.findAvailableProcessingTypeProperties();
 
-            var orderByProps = _.map(this.orderByArr, function (order) {
+            var orderByProps = _.map(self.orderByArr, function (order) {
                 return order.split(" ")[0];
             });
 
@@ -188,7 +188,7 @@
         }
 
         this.generateMetadataFilterList = function () {
-            var filters = this.filter || {};
+            var filters = self.filter || {};
 
 
             var filterList = [];
@@ -203,46 +203,46 @@
         this.addFilter = function (e) {
             e.preventDefault();
             var newFilter = {
-                column : this.column.value,
-                operand : this.operand.value,
-                value : this.filter_value.value
+                column : self.column.value,
+                operand : self.operand.value,
+                value : self.filter_value.value
             };
 
             var filterKey = newFilter.column;
 
             //We allow the selection of a column for max two times to specify a between like filter
             //otherwise we will show an error
-            if (typeof this.filter[filterKey + "_1"] !== "undefined") {
-                this.isDuplicateColumn = true;
+            if (typeof self.filter[filterKey + "_1"] !== "undefined") {
+                self.isDuplicateColumn = true;
                 return;
             } else {
-                this.isDuplicateColumn = false;
+                self.isDuplicateColumn = false;
             }
 
             if (typeof this.filter[filterKey] !== "undefined") {
-                var oneFilter = this.filter[filterKey];
+                var oneFilter = self.filter[filterKey];
 
                 if (oneFilter.operand === "=" || oneFilter.operand === "like" || oneFilter.operand === "ilike"
-                    || this.operand === "=" || this.operand === "like" || this.operand === "ilike") {
-                    this.isDuplicateColumn = true;
+                    || self.operand === "=" || self.operand === "like" || self.operand === "ilike") {
+                    self.isDuplicateColumn = true;
                     return;
                 } else {
-                    this.isDuplicateColumn = false;
+                    self.isDuplicateColumn = false;
                 }
 
-                delete this.filter[filterKey];
-                this.filter[filterKey + "_1"] = oneFilter;
+                delete self.filter[filterKey];
+                self.filter[filterKey + "_1"] = oneFilter;
                 filterKey = filterKey + "_2";
             }
 
-            this.filter[filterKey] = newFilter;
+            self.filter[filterKey] = newFilter;
 
-            this.column.value = "";
-            this.operand.value = "";
-            this.filter_value.value = "";
+            self.column.value = "";
+            self.operand.value = "";
+            self.filter_value.value = "";
 
-            this.one("update", function () {
-                $(this.column).focus();
+            self.one("update", function () {
+                $(self.column).focus();
             })
         }
 
@@ -252,15 +252,15 @@
         }
 
         this.addOrderBy = function (e) {
-            if (! this.tempOrderByProp.value) return;
-            if (! this.tempOrderByOrder.value) return;
+            if (! self.tempOrderByProp.value) return;
+            if (! self.tempOrderByOrder.value) return;
 
-            this.orderByArr.push(this.tempOrderByProp.value + " " + this.tempOrderByOrder.value);
+            self.orderByArr.push(self.tempOrderByProp.value + " " + self.tempOrderByOrder.value);
 
-            this.tempOrderByProp.value = "";
-            this.tempOrderByOrder.value = "";
+            self.tempOrderByProp.value = "";
+            self.tempOrderByOrder.value = "";
 
-            this.availableOrderByProperties = this.findAvailableOrderByProperties();
+            self.availableOrderByProperties = self.findAvailableOrderByProperties();
         }
 
         this.removeOrderBy = function (e) {
@@ -275,49 +275,49 @@
         }
 
         this.toggleEmptyTable = function () {
-            $(this.empty_table).toggleClass("active").find("span").toggleClass("glyphicon-unchecked glyphicon-ok");
+            $(self.empty_table).toggleClass("active").find("span").toggleClass("glyphicon-unchecked glyphicon-ok");
         }
 
         this.toggleTryUpdate = function () {
-            $(this.try_update).toggleClass("active").find("span").toggleClass("glyphicon-edit glyphicon-ok");
+            $(self.try_update).toggleClass("active").find("span").toggleClass("glyphicon-edit glyphicon-ok");
         }
 
         this.collectMetadata = function () {
             var tmpMetadata = {};
 
-            if (this.isExport()) {
-                if (this.filter_identifier.checked) {
+            if (self.isExport()) {
+                if (self.filter_identifier.checked) {
                     tmpMetadata.filter_identifier = true;
                 }
 
                 if (! tmpMetadata.filter_identifier) {
-                    if (! _.isEmpty(this.filter)) {
-                        tmpMetadata.filter = this.filter;
+                    if (! _.isEmpty(self.filter)) {
+                        tmpMetadata.filter = self.filter;
                     }
 
-                    if (! this.isSingleResultType()) {
-                        if (!_.isEmpty(this.orderByArr)) {
-                            tmpMetadata.order_by = this.orderByArr.join(", ");
+                    if (! self.isSingleResultType()) {
+                        if (!_.isEmpty(self.orderByArr)) {
+                            tmpMetadata.order_by = self.orderByArr.join(", ");
                         }
 
-                        if (this.limit.value) {
-                            tmpMetadata.limit = this.limit.value;
+                        if (self.limit.value) {
+                            tmpMetadata.limit = self.limit.value;
                         }
 
-                        if (this.offset.value) {
-                            tmpMetadata.offset = this.offset.value;
+                        if (self.offset.value) {
+                            tmpMetadata.offset = self.offset.value;
                         }
                     }
 
                 }
             }
 
-            if (this.isImport()) {
-                if ($(this.empty_table).hasClass("active")) {
+            if (self.isImport()) {
+                if ($(self.empty_table).hasClass("active")) {
                     tmpMetadata.empty_table = true;
                 }
 
-                if ($(this.try_update).hasClass("active")) {
+                if ($(self.try_update).hasClass("active")) {
                     tmpMetadata.try_update = true;
                 }
             }
@@ -326,53 +326,53 @@
         }
 
         this.applyMetadata = function (metadata) {
-            this.filter = metadata.filter || {};
+            self.filter = metadata.filter || {};
 
-            if (this.isExport()) {
+            if (self.isExport()) {
                 if (metadata.filter_identifier) {
-                    this.filter_identifier.checked = 1;
+                    self.filter_identifier.checked = 1;
                 } else {
-                    this.filter_identifier.checked = null;
+                    self.filter_identifier.checked = null;
                 }
 
                 if (metadata.order_by) {
-                    this.orderByArr = metadata.order_by.split(",").map(function(order) {
+                    self.orderByArr = metadata.order_by.split(",").map(function(order) {
                         return $.trim(order);
                     });
                 } else {
-                    this.orderByArr = [];
+                    self.orderByArr = [];
                 }
 
                 if (metadata.limit) {
-                    this.limit.value = metadata.limit;
+                    self.limit.value = metadata.limit;
                 }
 
                 if (metadata.offset) {
-                    this.offset.value = metadata.offset;
+                    self.offset.value = metadata.offset;
                 }
             }
 
-            if (this.isImport()) {
-                if (metadata.empty_table && ! $(this.empty_table).hasClass("active")) {
-                    this.toggleEmptyTable();
+            if (self.isImport()) {
+                if (metadata.empty_table && ! $(self.empty_table).hasClass("active")) {
+                    self.toggleEmptyTable();
                 }
 
-                if (! metadata.empty_table && $(this.empty_table).hasClass("active")) {
-                    this.toggleEmptyTable();
+                if (! metadata.empty_table && $(self.empty_table).hasClass("active")) {
+                    self.toggleEmptyTable();
                 }
 
-                if (metadata.try_update && ! $(this.try_update).hasClass("active")) {
-                    this.toggleTryUpdate();
+                if (metadata.try_update && ! $(self.try_update).hasClass("active")) {
+                    self.toggleTryUpdate();
                 }
 
-                if (! metadata.try_update && $(this.try_update).hasClass("active")) {
-                    this.toggleTryUpdate();
+                if (! metadata.try_update && $(self.try_update).hasClass("active")) {
+                    self.toggleTryUpdate();
                 }
             }
         }
 
         this.on("mount", function () {
-            this.syncWithProcessManager();
+            self.syncWithProcessManager();
         });
     }
 </script>

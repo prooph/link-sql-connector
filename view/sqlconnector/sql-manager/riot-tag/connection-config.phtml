@@ -96,13 +96,13 @@
 
         this.isValidDbName = function () {
 
-            if (! this.dbname.value) return false;
+            if (! self.dbname.value) return false;
 
-            var con = _.find(connections, {dbname : this.dbname.value});
+            var con = _.find(connections, {dbname : self.dbname.value});
 
             if (! con) return true;
 
-            return con.dbname === this.connection.dbname;
+            return con.dbname === self.connection.dbname;
         }
 
         this.testConnection = function () {
@@ -133,7 +133,7 @@
         this.saveConnection = function () {
             var tmpCon = get_connection_values();
 
-            if (this.isNew) {
+            if (self.isNew) {
                 $.postJSON(conApiUrl, tmpCon).then(
                     function (data) {
                         $.notify("<?php echo $this->translate('New connection created') ?>", "success");
